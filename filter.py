@@ -1,10 +1,16 @@
 import os
 
 from time import gmtime, strftime, time
+from dictionaries import ReferenceDictionary
 
 class Filter:
 
     def __init__(self):
+
+        ### Dictionary Management ###
+        self.reference_dictionary = ReferenceDictionary().reference_dictionary
+        self.dictionaries = [self.reference_dictionary]
+
         ### Used to detect & temp store data based on headers. ###
         self.name = ["name"]
         self.service_description = ["service_description"]
@@ -102,5 +108,5 @@ class Filter:
             write_file.close
 
 if __name__ == '__main__':
-    f = Filter()
-    f.run()
+    program = Filter()
+    program.run()
