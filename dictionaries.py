@@ -1,18 +1,20 @@
-class ReferenceDictionary:
+class Icinga:
     
     def __init__(self):
         
-        ### You can make changes to reference_dictionary to add additional or remove checks. ###
-        self.reference_dictionary = {
+        self.service_dictionary = {
             "name":"",
             "service_description":"",
             "servicegroups":"",
             "use":"",
+            "hostgroup_name":"",            
             "hostgroup":"",
-            "hostgroup_name":"",
             "notification_interval":"",
             "notification_options":"",
             "check_command":"",
             "display_name":"",
             "contact_groups":"",
         }
+
+        self.start_delimiter = "define service"
+        self.end_delimiter = "}"

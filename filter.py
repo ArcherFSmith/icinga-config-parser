@@ -1,112 +1,84 @@
 import os
-
 from time import gmtime, strftime, time
-from dictionaries import ReferenceDictionary
+import dictionaries
 
 class Filter:
 
     def __init__(self):
-
         ### Dictionary Management ###
-        self.reference_dictionary = ReferenceDictionary().reference_dictionary
-        self.dictionaries = [self.reference_dictionary]
+        self.reference_dictionary = dictionaries.Icinga().service_dictionary
+        self.dictionaries = []
 
-        ### Used to detect & temp store data based on headers. ###
-        self.name = ["name"]
-        self.service_description = ["service_description"]
-        self.servicegroups = ["servicegroups"]
-        self.use = ["use"]
-        self.hostgroup = ["hostgroup"]
-        self.hostgroup_name = ["hostgroup_name"]
-        self.notification_interval = ["notification_interval"]
-        self.notification_options = ["notification_options"]
-        self.check_command = ["check_command"]
-        self.display_name = ["display_name"]
-        self.contact_groups = ["contact_groups"]
-        self.arrays = [self.name, self.service_description, self.servicegroups, self.use, self.hostgroup, self.hostgroup_name, self.notification_interval, self.notification_options, self.check_command, self.display_name, self.contact_groups]
-
-        ### Stores data until output is written to the file. ###
-        self.output = []
-        self.string = ""
-        self.string_delimiter = ";"
-
-        ### Defines delimiters when parsing the file ###
-        self.start_delimiter = "define service "
-        self.end_delimiter = "}"
+        ### Segment Management ###
+        self.start_delimiter = dictionaries.Icinga().start_delimiter
+        self.end_delimiter = dictionaries.Icinga().end_delimiter
         self.active_segment = False
+        self.segment_number = -1
 
-        ### Sets current path ###
+        ### File / Output Management ###
+        self.output = ""
         self.base_path = os.getcwd()
+        self.file_identifier = "_" + strftime("%d-%b-%Y-%H%M%S", gmtime(time()))
+        self.file_extension = ".txt"
+        self.output_delimiter = ","
+
+    def get_user_input(self):
+        self._get_file_name()
+        self.file_path = self.base_path + "/" + self.file_path
+        self.output_path = self.file_path.rstrip(".cfg") + self.file_identifier + self.file_extension
+
+    def _get_file_name(self):
+        print("\nPlease ensure that the config shares the directory with this program.")
+        while True:
+            self.file_path = input("Enter File Name: ")
+            if os.path.exists(self.file_path): break
+            else: print("No file titled '" + self.file_path + "' found. Please Try Again...")
+
+    def read_file(self):
+        with open(self.file_path) as read_file:
+            file = read_file.readlines()
+            for line in file:
+                #line = line.strip().replace(",", "-")
+                self._manage_segments(line)
+            read_file.close()
+
+    def _manage_segments(self, line):
+        if line.startswith(self.start_delimiter): 
+                    self.active_segment = True
+                    self.segment_number += 1
+                    self.dictionaries.append(self.reference_dictionary.copy())
+
+        if line.startswith(self.end_delimiter): self.active_segment = False
+
+        if self.active_segment: 
+            for key in self.dictionaries[self.segment_number]: 
+                if line.startswith(key): 
+                    line = line.lstrip(key).strip()
+                    self.dictionaries[self.segment_number].update({key:line})
+
+    def write_to_output(self):
+        with open(self.output_path, "w") as write_file:
+            for key in self.reference_dictionary:
+                self.output = self.output + key + self.output_delimiter
+            self.output = self.output.rstrip(",")
+            for dictionary in self.dictionaries:
+                self.output = self.output + "\n"
+
+                for key in dictionary:
+                    self.output = self.output + dictionary.get(key) + self.output_delimiter
+
+            write_file.writelines(self.output)
+
+            print("\nOutput saved as " + self.output_path)
+
+            write_file.close
 
     def run(self):
         self.get_user_input()
         self.read_file()
         self.write_to_output()
 
-    def get_user_input(self):
-        ### User Input ###
-        print("Please ensure that the config shares the directory with this program.\nEnter File Name:\n")
-        self.file_name=input()
-
-    def read_file(self):
-        ### Reads file ###
-        with open(self.base_path + "/" + self.file_name) as read_file:
-
-            file = read_file.readlines()
-    
-            for line in file:
-
-                line = line.strip()
-
-                ### Determines if a new segment is found. ###
-                if line.startswith(self.start_delimiter): self.active_segment = True, print("Start Segment")
-
-                ### Generates a new line for the data and then pops it when the segment of data ends. ###
-                if line.startswith(self.end_delimiter): 
-
-                    self.active_segment = False
-                    print("End Segment")
-
-                    for element in self.arrays:
-
-                        ### Uses the length of each element to determine if the data was picked out. ###
-                        if len(element) > 1:
-                            self.string = self.string + element.pop() + self.string_delimiter
-                        else:
-                            self.string = self.string + "No Element Found" + self.string_delimiter
-
-            
-                    ### Adds a line to the output of the file & strips the last delimiter ###
-                    self.output.append(self.string.rstrip(self.string_delimiter))
-                    self.string = "\n"
-                    print("Wrote to Output")
-                
-                if self.active_segment:
-                    for element in self.arrays:
-                        
-                        ### Detects if the header of the data matches element[0] and then appends the data to the element. ###
-                        if(line.startswith(element[0])): 
-                            print("Line Detected")
-
-                            line, x, y = line.partition(";")
-
-                            ### Removes header from data, then due to both hostgroup & hostgroup_name it may have to remove _name. ###
-                            element.append(line.lstrip(element[0]).lstrip("_name").strip())
-
-            read_file.close()
-
-    def write_to_output(self):
-        ### Writes to File ###
-        output_file = self.base_path + "/" + self.file_name.rstrip(".cfg") + "_" + strftime("%d-%b-%Y-%H%M%S", gmtime(time())) + ".txt"
-
-        with open(output_file, "w") as write_file:
-
-            ### Each element of the output array is written to the textfile. ###
-            write_file.writelines(self.output)
-            print("Output written to " + output_file)
-            input()
-            write_file.close
-
+### Run Program ###
 if __name__ == '__main__':
     program = Filter()
     program.run()
